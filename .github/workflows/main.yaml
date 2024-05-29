@@ -1,0 +1,63 @@
+name: CI
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v4
+        with:
+          path: target
+          key: cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Init Rust
+        shell: bash
+        run: |
+          cargo install cargo-bundle-licenses
+      - name: Build
+        shell: bash
+        run: |
+          cargo build --locked --release
+          cargo bundle-licenses --format yaml --output THIRDPARTY.yml
+          mkdir artifact
+          mv \
+            target/release/*.exe \
+            artifact/
+          cp LICENSE README.md THIRDPARTY.yml artifact/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact
+          path: ./artifact
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    env:
+      FILENAME: ${{ github.event.repository.name }}_${{ github.ref_name }}.zip
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: artifact
+          path: ./artifact
+      - name: Zip
+        run: |
+          cd artifact
+          zip ../${{ env.FILENAME }} *.exe LICENSE README.md THIRDPARTY.yml
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ github.event.repository.name }} ${{ github.ref_name }}
+          files: ${{ env.FILENAME }}
