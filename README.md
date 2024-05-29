@@ -1,5 +1,7 @@
 # dankagu-inf-dj
 
+![sample](./sample.webp)
+
 IDIX INFINITAS 互換コントローラーのスクラッチを
 カーソルキー上下の入力に変換する東方ダンマクカグラ向けのツールです。
 
