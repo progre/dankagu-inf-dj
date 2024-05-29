@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use std::mem::size_of;
 use std::os::windows::ffi::OsStringExt;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use windows::core::Interface;
@@ -18,8 +19,14 @@ use windows::Win32::Devices::HumanInterfaceDevice::DIEDFL_ALLDEVICES;
 use windows::Win32::Devices::HumanInterfaceDevice::DIENUM_CONTINUE;
 use windows::Win32::Devices::HumanInterfaceDevice::DIJOYSTATE2;
 use windows::Win32::Devices::HumanInterfaceDevice::DIRECTINPUT_VERSION;
+use windows::Win32::Foundation::GetLastError;
 use windows::Win32::Foundation::BOOL;
+use windows::Win32::Foundation::HANDLE;
+use windows::Win32::Foundation::WAIT_OBJECT_0;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::System::Threading::CreateEventW;
+use windows::Win32::System::Threading::WaitForSingleObject;
+use windows::Win32::System::Threading::INFINITE;
 
 #[allow(dead_code)]
 extern "system" {
@@ -132,13 +139,23 @@ pub fn create_device() -> IDirectInputDevice8W {
     let device = device.unwrap();
 
     unsafe { device.SetDataFormat(&c_dfDIJoystick2 as *const _ as *mut _) }.unwrap();
-    unsafe { device.Acquire() }.unwrap();
     device
 }
 
-pub fn get_state(device: &IDirectInputDevice8W) -> Result<DIJOYSTATE2> {
-    unsafe { device.Poll() }
-        .map_err(|source| Error::new(source).context("Failed to poll devicec"))?;
+pub fn init_event_notification(device: &IDirectInputDevice8W) -> HANDLE {
+    let event = unsafe { CreateEventW(None, false, false, None) }.unwrap();
+    unsafe { device.SetEventNotification(event) }.unwrap();
+    event
+}
+
+pub fn acquire(device: &IDirectInputDevice8W) -> windows::core::Result<()> {
+    unsafe { device.Acquire() }
+}
+
+pub fn get_state(device: &IDirectInputDevice8W, event: HANDLE) -> Result<DIJOYSTATE2> {
+    if unsafe { WaitForSingleObject(event, INFINITE) } != WAIT_OBJECT_0 {
+        return Err(unsafe { anyhow!("{:?}", GetLastError()) });
+    }
     let mut state = DIJOYSTATE2::default();
     const SIZE: u32 = size_of::<DIJOYSTATE2>() as u32;
     unsafe { device.GetDeviceState(SIZE, &mut state as *mut _ as *mut c_void) }
