@@ -20,6 +20,8 @@ Options:
   -r, --refresh-rate <REFRESH_RATE>          [default: 60]
       --hold                                 スクラッチを回している間、キーを連打せず押しっぱなしにする
       --hold-release <RELEASE_MILLISECONDS>  --hold 指定時、回転が止まってからキーを離すまでの時間 [default: 100]
+      --hold-repeat-delay <MILLISECONDS>     --hold 指定時、押してからキーリピートが始まるまでの時間 [default: Windows のキーボード設定]
+      --hold-repeat-interval <MILLISECONDS>  --hold 指定時、キーリピートの間隔 [default: Windows のキーボード設定]
   -h, --help                                 Print help
 ```
 
@@ -36,5 +38,9 @@ Options:
 
 `--hold` を指定すると、スクラッチを回している間は上下キーを押しっぱなしにします（連打しません）。
 回転が `--hold-release` ミリ秒（既定 100）止まるとキーを離します。回転方向が変わると押し直します。
+
+押している間は実際のキーボードと同様にキーリピートを送ります。
+リピートの開始時間・間隔は既定で Windows のキーボード設定に従い、
+`--hold-repeat-delay` / `--hold-repeat-interval` で変更できます。
 
 `--hold` は `--threshold` / `--stroke` / `--refresh-rate` と同時に指定できません。
