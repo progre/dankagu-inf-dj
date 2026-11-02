@@ -23,6 +23,7 @@ use windows::Win32::Foundation::GetLastError;
 use windows::Win32::Foundation::BOOL;
 use windows::Win32::Foundation::HANDLE;
 use windows::Win32::Foundation::WAIT_OBJECT_0;
+use windows::Win32::Foundation::WAIT_TIMEOUT;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::CreateEventW;
 use windows::Win32::System::Threading::WaitForSingleObject;
@@ -153,12 +154,25 @@ pub fn acquire(device: &IDirectInputDevice8W) -> windows::core::Result<()> {
 }
 
 pub fn get_state(device: &IDirectInputDevice8W, event: HANDLE) -> Result<DIJOYSTATE2> {
-    if unsafe { WaitForSingleObject(event, INFINITE) } != WAIT_OBJECT_0 {
+    Ok(get_state_timeout(device, event, INFINITE)?.unwrap())
+}
+
+/// タイムアウトした場合は `None` を返す
+pub fn get_state_timeout(
+    device: &IDirectInputDevice8W,
+    event: HANDLE,
+    timeout_ms: u32,
+) -> Result<Option<DIJOYSTATE2>> {
+    let ret = unsafe { WaitForSingleObject(event, timeout_ms) };
+    if ret == WAIT_TIMEOUT {
+        return Ok(None);
+    }
+    if ret != WAIT_OBJECT_0 {
         return Err(unsafe { anyhow!("{:?}", GetLastError()) });
     }
     let mut state = DIJOYSTATE2::default();
     const SIZE: u32 = size_of::<DIJOYSTATE2>() as u32;
     unsafe { device.GetDeviceState(SIZE, &mut state as *mut _ as *mut c_void) }
         .map_err(|source| Error::new(source).context("Failed to get device state"))?;
-    Ok(state)
+    Ok(Some(state))
 }

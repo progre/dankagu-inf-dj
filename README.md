@@ -15,10 +15,12 @@ IDIX INFINITAS 互換コントローラーのスクラッチを
 Usage: dankagu-inf-dj.exe [OPTIONS]
 
 Options:
-  -t, --threshold <THRESHOLD>         [default: 1000]
+  -t, --threshold <THRESHOLD>                [default: 1000]
   -s, --stroke <STROKE_MILLISECONDS>
-  -r, --refresh-rate <REFRESH_RATE>   [default: 60]
-  -h, --help                          Print help
+  -r, --refresh-rate <REFRESH_RATE>          [default: 60]
+      --hold                                 スクラッチを回している間、キーを連打せず押しっぱなしにする
+      --hold-release <RELEASE_MILLISECONDS>  --hold 指定時、回転が止まってからキーを離すまでの時間 [default: 100]
+  -h, --help                                 Print help
 ```
 
 ゲーム内のフレームレート上限の設定に合わせて `--refresh-rate` を指定すると快適に操作できます。
@@ -29,3 +31,10 @@ Options:
 | 60fps上限   | `-r 60`                     |
 | 120fps上限  | `-r 120`                    |
 | 無制限の    | `-r 0`                      |
+
+### 押しっぱなしモード
+
+`--hold` を指定すると、スクラッチを回している間は上下キーを押しっぱなしにします（連打しません）。
+回転が `--hold-release` ミリ秒（既定 100）止まるとキーを離します。回転方向が変わると押し直します。
+
+`--hold` は `--threshold` / `--stroke` / `--refresh-rate` と同時に指定できません。
